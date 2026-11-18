@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高一理科总平均计算器</title>
+    <link rel="stylesheet" href="理科.css">
+</head>
+
+<body>
+    <div class="bg-grid"></div>
+    <div class="container">
+        <h1>🏫 高一理科总平均计算器</h1>
+        <p>根据宽柔中学计算方法 · 总平均 = Σ（分数 × 节数）÷ 46</p>
+
+        <!-- 上半年成绩 -->
+        <div class="semester">
+            <h2>📚 上半年成绩</h2>
+            <div class="subject-group"></div>
+            <div class="period-check">总节数：<span class="period-total">0</span> / 46</div>
+            <div class="center">
+                <button data-semester="1">计算上半年成绩</button>
+            </div>
+        </div>
+
+        <!-- 下半年成绩 -->
+        <div class="semester">
+            <h2>📖 下半年成绩</h2>
+            <div class="subject-group"></div>
+            <div class="period-check">总节数：<span class="period-total">0</span> / 46</div>
+            <div class="center">
+                <button data-semester="2" class="second">计算下半年成绩</button>
+            </div>
+        </div>
+
+        <!-- 最终计算 -->
+        <div class="center">
+            <button id="btnFinal" class="final">计算最终总平均</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // 除数固定 46 节（与文商一样：分数 × 节数，再除以总节数）
+        const DIVISOR = 46;
+
+        // 科目与节数：节数留空表示还没设定，计算时按 0 计
+        const SUBJECTS = [
+            { label: '华文 Chinese Language', periods: 5 },
+            { label: '国文 Malay Language', periods: 5 },
+            { label: '英文 English Language', periods: 6 },
+            { label: '数学 Mathematics', periods: 7 },
+            { label: '生物 Biology', periods: 5 },
+            { label: '化学 Chemistry', periods: 5 },
+            { label: '物理 Physics', periods: 5 },
+            { label: '电脑 Computer', periods: 2 },
+            { label: '体育 Physical Education', periods: 2 },
+            { label: '历史辅导 History(m)', periods: 1 },
+            { label: '联课活动 Co-curriculum', periods: 3 }
+        ];
+
+        let sem1Result = 0;
+        let sem2Result = 0;
+
+        // 依据 SUBJECTS 生成两个学期的科目卡片
+        function buildSubjects() {
+            document.querySelectorAll('.semester').forEach(function (card) {
+                const group = card.querySelector('.subject-group');
+                group.innerHTML = '';
+
+                SUBJECTS.forEach(function (subject) {
+                    const item = document.createElement('div');
+                    item.className = 'subject';
+
+                    const label = document.createElement('label');
+                    label.textContent = subject.label;
+
+                    const inputs = document.createElement('div');
+                    inputs.className = 'inputs';
+
+                    const score = document.createElement('input');
+                    score.type = 'number';
+                    score.className = 'score';
+                    score.min = '0';
+                    score.max = '100';
+                    score.placeholder = '分数';
+
+                    // 节数由课程固定，只显示，不能修改
+                    const periods = document.createElement('span');
+                    periods.className = 'periods';
+                    periods.textContent = subject.periods === '' ? '待定' : subject.periods + ' 节';
+                    periods.title = '节数由课程固定，不能修改';
+
+                    inputs.appendChild(score);
+                    inputs.appendChild(periods);
+                    item.appendChild(label);
+                    item.appendChild(inputs);
+                    group.appendChild(item);
+                });
+
+                updatePeriodTotal(card);
+            });
+        }
+
+        function updatePeriodTotal(card) {
+            let periods = 0;
+            SUBJECTS.forEach(function (subject) {
+                periods += parseFloat(subject.periods) || 0;
+            });
+
+            const info = card.querySelector('.period-check');
+            const total = card.querySelector('.period-total');
+            total.textContent = periods;
+
+            info.classList.remove('ok', 'off');
+            if (Math.abs(periods - DIVISOR) < 0.001) {
+                info.classList.add('ok');
+                info.title = '总节数正好 ' + DIVISOR + ' 节';
+            } else if (periods > 0) {
+                info.classList.add('off');
+                info.title = '总节数与 ' + DIVISOR + ' 节不符，计算仍除以 ' + DIVISOR;
+            } else {
+                info.title = '请填入各科节数';
+            }
+        }
+
+        function calculateSemester(semester) {
+            const card = document.querySelectorAll('.semester')[semester - 1];
+            let weighted = 0;
+
+            card.querySelectorAll('.subject').forEach(function (item, index) {
+                const score = parseFloat(item.querySelector('.score').value) || 0;
+                const periods = parseFloat(SUBJECTS[index].periods) || 0;
+                weighted += score * periods;
+            });
+
+            const total = weighted / DIVISOR;
+
+            if (semester === 1) {
+                sem1Result = total;
+            } else {
+                sem2Result = total;
+            }
+
+            document.getElementById('result').classList.remove('final-result');
+            document.getElementById('result').innerHTML =
+                '第' + semester + '学期成绩: ' + total.toFixed(2);
+        }
+
+        function calculateFinal() {
+            if (sem1Result === 0 || sem2Result === 0) {
+                alert('请先计算两个学期的成绩！');
+                return;
+            }
+
+            const final = (sem1Result + sem2Result) / 2;
+            document.getElementById('result').innerHTML =
+                '上半年成绩: ' + sem1Result.toFixed(2) + '\n' +
+                '下半年成绩: ' + sem2Result.toFixed(2) + '\n' +
+                '最终总平均: ' + final.toFixed(2);
+
+            document.getElementById('result').classList.add('final-result');
+        }
+
+        document.querySelectorAll('button[data-semester]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                calculateSemester(parseInt(button.dataset.semester, 10));
+            });
+        });
+
+        document.getElementById('btnFinal').addEventListener('click', calculateFinal);
+
+        buildSubjects();
+    </script>
+</body>
+
+</html>
+
+<!-- made by Sky Guay Hong Wei-->
